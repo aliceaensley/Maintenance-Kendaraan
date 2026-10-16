@@ -157,7 +157,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Discord Webhook URL (Opsional)</label>
                     <input type="url" id="form-webhook" placeholder="https://discord.com/api/webhooks/.../...?thread_id=..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-[11px] text-slate-500 mt-1">💡 Tambahkan <code>?thread_id=ID_THREAD</code> pada webhook URL agar pesan terkirim ke thread tertentu.</p>
+                    <p class="text-[11px] text-slate-500 mt-1">💡 Tambahkan <code>?thread_id=ID_THREAD</code> pada webhook URL agar pesan terkirim ke thread tertentu. Gambar terlampir akan otomatis terkirim ke Discord.</p>
                 </div>
 
                 <!-- Preview Kalkulasi -->
@@ -187,8 +187,7 @@
             { id: 4, date: '2026-10-08', vehicle: 'Compactor Sakai', plate: 'B 1102 CP', component: 2, solar: 95.00, images: [] }
         ];
 
-        // Global State Gambar Form (Maksimal 2)
-        let formImages = []; // Array of Base64 strings or Object { file, url }
+        let formImages = []; // Array of Base64 strings
 
         // Helper: Tentukan periode berdasarkan tanggal
         function getPeriod(dateStr) {
@@ -202,7 +201,6 @@
             return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // Inisialisasi saat halaman dimuat
         window.addEventListener('DOMContentLoaded', () => {
             const today = new Date();
             document.getElementById('current-date-display').innerText = today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -212,20 +210,17 @@
             const currentDay = today.getDate();
             let autoPeriod = currentDay <= 10 ? 1 : (currentDay <= 20 ? 2 : 3);
             document.getElementById('filter-period').value = autoPeriod;
-            document.getElementById('active-period-badge').innerText = `Periode Otomatis Aktif: Periode ${autoPeriod}`;
+            document.getElementById('active-period-badge').innerText = `Periode Aktif Otomatis: Periode ${autoPeriod}`;
 
-            // Event listener klik pada area paste
             const pasteArea = document.getElementById('image-paste-area');
             const fileInput = document.getElementById('image-file-input');
             pasteArea.addEventListener('click', () => fileInput.click());
 
-            // Event listener Paste (Ctrl+V) di seluruh modal / pasteArea
             document.addEventListener('paste', handlePasteEvent);
 
             applyFilter();
         });
 
-        // Handler Paste (Ctrl+V)
         function handlePasteEvent(event) {
             const modal = document.getElementById('maintenance-modal');
             if (modal.classList.contains('hidden')) return;
@@ -247,7 +242,7 @@
                     processImageFile(files[i]);
                 }
             }
-            event.target.value = ''; // Reset input
+            event.target.value = '';
         }
 
         function processImageFile(file) {
@@ -292,10 +287,9 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            formImages = []; // Reset gambar
+            formImages = [];
 
             if (id) {
-                // Mode Edit
                 document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2 text-amber-400"></i>Edit Laporan Maintenance`;
                 document.getElementById('submit-btn-text').innerText = 'Update Perubahan';
                 
@@ -313,7 +307,6 @@
                     calculatePreview();
                 }
             } else {
-                // Mode Tambah Baru
                 document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance`;
                 document.getElementById('submit-btn-text').innerText = 'Submit & Kirim ke Discord';
                 document.getElementById('maintenance-form').reset();
@@ -433,7 +426,6 @@
 
             let newItem;
             if (id) {
-                // Update Existing
                 const index = maintenanceData.findIndex(d => d.id == id);
                 if (index !== -1) {
                     maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, component, solar, images: [...formImages] };
@@ -441,7 +433,6 @@
                 }
                 alert('Laporan maintenance berhasil diperbarui!');
             } else {
-                // Add New
                 newItem = {
                     id: Date.now(),
                     date,
@@ -455,14 +446,13 @@
                 alert('Laporan maintenance baru berhasil disimpan!');
             }
 
-            // Close & Reset
             closeModal();
             document.getElementById('filter-month').value = new Date(date).getMonth() + 1;
             applyFilter();
 
-            // Kirim ke Discord Webhook jika diisi
+            // Kirim ke Discord Webhook (termasuk file gambar asli via FormData)
             if (webhookUrl) {
-                await sendToDiscordThread(webhookUrl, newItem, compCost, totalCost, period, !!id);
+                await sendToDiscordWithImages(webhookUrl, newItem, compCost, totalCost, period, !!id);
             }
         }
 
@@ -473,10 +463,21 @@
             }
         }
 
-        async function sendToDiscordThread(webhookUrl, item, compCost, totalCost, period, isEdit = false) {
+        // Fungsi konversi DataURL/Base64 ke File/Blob agar bisa dilampirkan ke Discord Webhook multipart/form-data
+        function dataURLtoBlob(dataurl) {
+            let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], {type:mime});
+        }
+
+        async function sendToDiscordWithImages(webhookUrl, item, compCost, totalCost, period, isEdit = false) {
             const actionTitle = isEdit ? "✏️ **Laporan Maintenance Diperbarui**" : "🚨 **Laporan Maintenance Kendaraan Baru**";
             
-            // Format Embed Discord
+            const formData = new FormData();
+            
             const embed = {
                 title: `${item.vehicle} (${item.plate})`,
                 color: isEdit ? 16776960 : 3447003,
@@ -485,31 +486,47 @@
                     { name: "⏱️ Periode", value: `Periode ${period}`, inline: true },
                     { name: "🔧 Jumlah Komponen", value: `${item.component} (${formatCurrency(compCost)})`, inline: true },
                     { name: "⛽ Biaya Solar", value: formatCurrency(item.solar), inline: true },
-                    { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false },
-                    { name: "🖼️ Jumlah Bukti Gambar", value: `${item.images ? item.images.length : 0} gambar terlampir`, inline: false }
+                    { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false }
                 ],
                 footer: { text: "Fleet Maintenance Dashboard System" },
                 timestamp: new Date().toISOString()
             };
+
+            // Jika ada gambar, set attachment image discord atau masukkan ke payload
+            if (item.images && item.images.length > 0) {
+                // Tampilkan gambar pertama langsung di embed (jika diinginkan)
+                // embed.image = { url: `attachment://bukti_1.png` };
+            }
 
             const payload = {
                 content: `${actionTitle} (Periode ${period})`,
                 embeds: [embed]
             };
 
+            formData.append('payload_json', JSON.stringify(payload));
+
+            // Masukkan file gambar ke FormData jika ada
+            if (item.images && item.images.length > 0) {
+                item.images.forEach((imgBase64, index) => {
+                    const blob = dataURLtoBlob(imgBase64);
+                    formData.append(`files[${index}]`, blob, `bukti_maintenance_${index + 1}.png`);
+                });
+            }
+
             try {
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: formData // Menggunakan FormData agar file gambar terkirim utuh ke Discord
                 });
                 if (response.ok) {
-                    console.log('Berhasil dikirim ke Discord!');
+                    console.log('Laporan & gambar berhasil dikirim ke Discord!');
                 } else {
                     console.error('Gagal mengirim ke Discord:', response.statusText);
+                    alert('Laporan tersimpan, namun pengiriman file gambar ke Discord gagal (Cek URL Webhook atau batasan ukuran file).');
                 }
             } catch (err) {
                 console.error('Error mengirim ke Discord:', err);
+                alert('Catatan: Pengiriman ke Discord Webhook dibatasi oleh kebijakan CORS browser. Jika dicoba langsung via browser dan gagal, Anda memerlukan server kecil / backend proxy untuk meneruskan webhook.');
             }
         }
     </script>
