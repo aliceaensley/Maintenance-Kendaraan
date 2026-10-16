@@ -26,9 +26,26 @@
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <!-- Settings Bar (Discord Thread ID Manager) -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-100 text-indigo-700 p-2.5 rounded-lg">
+                    <i class="fa-brands fa-discord text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-slate-800">Discord Webhook & Thread Setting</h4>
+                    <p class="text-xs text-slate-500">Atur Thread ID Discord di sini. Cukup edit ID saat berganti periode tanpa ubah webhook URL.</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 w-full md:w-auto">
+                <input type="text" id="global-thread-id" placeholder="Masukkan Thread ID Discord..." oninput="saveThreadIdSetting()" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg p-2.5 flex-grow md:w-72 focus:ring-blue-500 focus:border-blue-500">
+                <span class="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200 whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i> Tersimpan</span>
+            </div>
+        </div>
+
         <!-- Filter Section -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-center justify-between">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex flex-wrap gap-4 items-center">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Bulan</label>
@@ -63,17 +80,17 @@
         </div>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <p class="text-xs font-medium text-slate-500 uppercase">Total Laporan Periode Ini</p>
                 <h3 id="stat-count" class="text-2xl font-bold text-slate-900 mt-1">0</h3>
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <p class="text-xs font-medium text-slate-500 uppercase">Total Biaya Komponen (x 1.26)</p>
-                <h3 id="stat-component" class="text-2xl font-bold text-blue-600 mt-1">$0.00</h3>
+                <p class="text-xs font-medium text-slate-500 uppercase">Total Biaya Engine & Body (x 1.26)</p>
+                <h3 id="stat-engine-body" class="text-2xl font-bold text-blue-600 mt-1">$0.00</h3>
             </div>
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <p class="text-xs font-medium text-slate-500 uppercase">Total Biaya Solar & Komponen</p>
+                <p class="text-xs font-medium text-slate-500 uppercase">Total Keseluruhan (Engine, Body, Solar)</p>
                 <h3 id="stat-total" class="text-2xl font-bold text-emerald-600 mt-1">$0.00</h3>
             </div>
         </div>
@@ -92,7 +109,8 @@
                             <th class="py-3 px-4">Periode</th>
                             <th class="py-3 px-4">Nama Kendaraan</th>
                             <th class="py-3 px-4">Plat Nomor</th>
-                            <th class="py-3 px-4 text-right">Jml Component</th>
+                            <th class="py-3 px-4 text-right">Engine ($)</th>
+                            <th class="py-3 px-4 text-right">Body ($)</th>
                             <th class="py-3 px-4 text-right">Solar ($)</th>
                             <th class="py-3 px-4 text-right">Total Biaya ($)</th>
                             <th class="py-3 px-4 text-center">Bukti Gambar</th>
@@ -130,16 +148,21 @@
                         <input type="text" id="form-plate" placeholder="B 1234 XYZ" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Jumlah Component</label>
-                        <input type="number" step="any" id="form-component" placeholder="0" required oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Engine (x 1.26)</label>
+                        <input type="number" step="any" id="form-engine" placeholder="0" oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Body (x 1.26)</label>
+                        <input type="number" step="any" id="form-body" placeholder="0" oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Solar ($)</label>
-                        <input type="number" step="any" id="form-solar" placeholder="0.00" required oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <input type="number" step="any" id="form-solar" placeholder="0.00" oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
+                <p class="text-[11px] text-slate-400">* Kolom Engine, Body, dan Solar bersifat opsional (kosongkan jika tidak ada).</p>
 
                 <!-- Area Attachment Bukti Gambar (Maks 2) -->
                 <div>
@@ -154,16 +177,10 @@
                     <div id="image-preview-container" class="grid grid-cols-2 gap-3 mt-3"></div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Discord Webhook URL (Opsional)</label>
-                    <input type="url" id="form-webhook" placeholder="https://discord.com/api/webhooks/.../...?thread_id=..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-[11px] text-slate-500 mt-1">💡 Tambahkan <code>?thread_id=ID_THREAD</code> pada webhook URL agar pesan terkirim ke thread tertentu. Gambar terlampir akan otomatis terkirim ke Discord.</p>
-                </div>
-
                 <!-- Preview Kalkulasi -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 space-y-1">
-                    <div class="flex justify-between"><span>Biaya Component (x 1.26):</span> <strong id="preview-comp">$0.00</strong></div>
-                    <div class="flex justify-between"><span>Total Biaya (Component + Solar):</span> <strong id="preview-total">$0.00</strong></div>
+                    <div class="flex justify-between"><span>Biaya Engine & Body (x 1.26):</span> <strong id="preview-engine-body">$0.00</strong></div>
+                    <div class="flex justify-between"><span>Total Keseluruhan:</span> <strong id="preview-total">$0.00</strong></div>
                 </div>
 
                 <div class="pt-2 flex justify-end space-x-3">
@@ -179,17 +196,28 @@
 
     <!-- Script Aplikasi -->
     <script>
-        // Sample Initial Data
-        let maintenanceData = [
-            { id: 1, date: '2026-10-03', vehicle: 'Dump Truck Hino 500', plate: 'B 9182 UY', component: 4, solar: 150.50, images: [] },
-            { id: 2, date: '2026-10-14', vehicle: 'Excavator PC200', plate: 'B 4412 EX', component: 8, solar: 320.00, images: [] },
-            { id: 3, date: '2026-10-25', vehicle: 'Bulldozer D65', plate: 'B 7731 BD', component: 3, solar: 210.75, images: [] },
-            { id: 4, date: '2026-10-08', vehicle: 'Compactor Sakai', plate: 'B 1102 CP', component: 2, solar: 95.00, images: [] }
+        // Webhook URL Utama yang Anda berikan
+        const BASE_WEBHOOK_URL = "https://discord.com/api/webhooks/1560485872334413826/VdkBoCpDYC2XHzTvKIsOeezbLPIlive_5uJAa81Md6jF_mdXoXraogiQxRMHB2XUBKbt";
+
+        // Storage Persistence
+        let maintenanceData = JSON.parse(localStorage.getItem('fleet_maintenance_data')) || [
+            { id: 1, date: '2026-10-03', vehicle: 'Dump Truck Hino 500', plate: 'B 9182 UY', engine: 4, body: 2, solar: 150.50, images: [] },
+            { id: 2, date: '2026-10-14', vehicle: 'Excavator PC200', plate: 'B 4412 EX', engine: 5, body: 3, solar: 320.00, images: [] },
+            { id: 3, date: '2026-10-25', vehicle: 'Bulldozer D65', plate: 'B 7731 BD', engine: 3, body: 0, solar: 210.75, images: [] },
+            { id: 4, date: '2026-10-08', vehicle: 'Compactor Sakai', plate: 'B 1102 CP', engine: 2, body: 1, solar: 95.00, images: [] }
         ];
 
-        let formImages = []; // Array of Base64 strings
+        function saveToLocalStorage() {
+            localStorage.setItem('fleet_maintenance_data', JSON.stringify(maintenanceData));
+        }
 
-        // Helper: Tentukan periode berdasarkan tanggal
+        function saveThreadIdSetting() {
+            const threadId = document.getElementById('global-thread-id').value.trim();
+            localStorage.setItem('fleet_discord_thread_id', threadId);
+        }
+
+        let formImages = [];
+
         function getPeriod(dateStr) {
             const day = new Date(dateStr).getDate();
             if (day <= 10) return 1;
@@ -211,6 +239,10 @@
             let autoPeriod = currentDay <= 10 ? 1 : (currentDay <= 20 ? 2 : 3);
             document.getElementById('filter-period').value = autoPeriod;
             document.getElementById('active-period-badge').innerText = `Periode Aktif Otomatis: Periode ${autoPeriod}`;
+
+            // Load saved Thread ID
+            const savedThreadId = localStorage.getItem('fleet_discord_thread_id') || '';
+            document.getElementById('global-thread-id').value = savedThreadId;
 
             const pasteArea = document.getElementById('image-paste-area');
             const fileInput = document.getElementById('image-file-input');
@@ -299,8 +331,9 @@
                     document.getElementById('form-date').value = item.date;
                     document.getElementById('form-vehicle').value = item.vehicle;
                     document.getElementById('form-plate').value = item.plate;
-                    document.getElementById('form-component').value = item.component;
-                    document.getElementById('form-solar').value = item.solar;
+                    document.getElementById('form-engine').value = item.engine || 0;
+                    document.getElementById('form-body').value = item.body || 0;
+                    document.getElementById('form-solar').value = item.solar || 0;
                     if (item.images && item.images.length > 0) {
                         formImages = [...item.images];
                     }
@@ -324,12 +357,14 @@
         }
 
         function calculatePreview() {
-            const compVal = parseFloat(document.getElementById('form-component').value) || 0;
+            const engineVal = parseFloat(document.getElementById('form-engine').value) || 0;
+            const bodyVal = parseFloat(document.getElementById('form-body').value) || 0;
             const solarVal = parseFloat(document.getElementById('form-solar').value) || 0;
-            const compCalculated = compVal * 1.26;
-            const total = compCalculated + solarVal;
+            
+            const engineBodyCalculated = (engineVal + bodyVal) * 1.26;
+            const total = engineBodyCalculated + solarVal;
 
-            document.getElementById('preview-comp').innerText = formatCurrency(compCalculated);
+            document.getElementById('preview-engine-body').innerText = formatCurrency(engineBodyCalculated);
             document.getElementById('preview-total').innerText = formatCurrency(total);
         }
 
@@ -357,14 +392,16 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
                 return;
             }
 
             data.forEach(item => {
                 const period = getPeriod(item.date);
-                const compCost = item.component * 1.26;
-                const totalCost = compCost + item.solar;
+                const engineCost = (item.engine || 0) * 1.26;
+                const bodyCost = (item.body || 0) * 1.26;
+                const totalEngineBodyCost = engineCost + bodyCost;
+                const totalCost = totalEngineBodyCost + (item.solar || 0);
 
                 let imageBadges = '<span class="text-xs text-slate-400">-</span>';
                 if (item.images && item.images.length > 0) {
@@ -380,8 +417,9 @@
                     <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-medium">Periode ${period}</span></td>
                     <td class="py-3 px-4">${item.vehicle}</td>
                     <td class="py-3 px-4 font-mono text-xs">${item.plate}</td>
-                    <td class="py-3 px-4 text-right">${item.component} <span class="text-xs text-slate-400">(${formatCurrency(compCost)})</span></td>
-                    <td class="py-3 px-4 text-right">${formatCurrency(item.solar)}</td>
+                    <td class="py-3 px-4 text-right">${item.engine || 0} <span class="text-xs text-slate-400">(${formatCurrency(engineCost)})</span></td>
+                    <td class="py-3 px-4 text-right">${item.body || 0} <span class="text-xs text-slate-400">(${formatCurrency(bodyCost)})</span></td>
+                    <td class="py-3 px-4 text-right">${formatCurrency(item.solar || 0)}</td>
                     <td class="py-3 px-4 text-right font-bold text-slate-900">${formatCurrency(totalCost)}</td>
                     <td class="py-3 px-4 text-center">${imageBadges}</td>
                     <td class="py-3 px-4 text-center space-x-1">
@@ -395,17 +433,19 @@
 
         function renderSummary(data) {
             const count = data.length;
-            let totalComp = 0;
+            let totalEngineBody = 0;
             let grandTotal = 0;
 
             data.forEach(item => {
-                const compCost = item.component * 1.26;
-                totalComp += compCost;
-                grandTotal += (compCost + item.solar);
+                const engineCost = (item.engine || 0) * 1.26;
+                const bodyCost = (item.body || 0) * 1.26;
+                const engBodySum = engineCost + bodyCost;
+                totalEngineBody += engBodySum;
+                grandTotal += (engBodySum + (item.solar || 0));
             });
 
             document.getElementById('stat-count').innerText = count;
-            document.getElementById('stat-component').innerText = formatCurrency(totalComp);
+            document.getElementById('stat-engine-body').innerText = formatCurrency(totalEngineBody);
             document.getElementById('stat-total').innerText = formatCurrency(grandTotal);
         }
 
@@ -416,19 +456,21 @@
             const date = document.getElementById('form-date').value;
             const vehicle = document.getElementById('form-vehicle').value;
             const plate = document.getElementById('form-plate').value;
-            const component = parseFloat(document.getElementById('form-component').value);
-            const solar = parseFloat(document.getElementById('form-solar').value);
-            const webhookUrl = document.getElementById('form-webhook').value.trim();
+            const engine = parseFloat(document.getElementById('form-engine').value) || 0;
+            const body = parseFloat(document.getElementById('form-body').value) || 0;
+            const solar = parseFloat(document.getElementById('form-solar').value) || 0;
 
-            const compCost = component * 1.26;
-            const totalCost = compCost + solar;
+            const engineCost = engine * 1.26;
+            const bodyCost = body * 1.26;
+            const totalEngineBodyCost = engineCost + bodyCost;
+            const totalCost = totalEngineBodyCost + solar;
             const period = getPeriod(date);
 
             let newItem;
             if (id) {
                 const index = maintenanceData.findIndex(d => d.id == id);
                 if (index !== -1) {
-                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, component, solar, images: [...formImages] };
+                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, engine, body, solar, images: [...formImages] };
                     newItem = maintenanceData[index];
                 }
                 alert('Laporan maintenance berhasil diperbarui!');
@@ -438,7 +480,8 @@
                     date,
                     vehicle,
                     plate,
-                    component,
+                    engine,
+                    body,
                     solar,
                     images: [...formImages]
                 };
@@ -446,24 +489,29 @@
                 alert('Laporan maintenance baru berhasil disimpan!');
             }
 
+            saveToLocalStorage();
             closeModal();
             document.getElementById('filter-month').value = new Date(date).getMonth() + 1;
             applyFilter();
 
-            // Kirim ke Discord Webhook (termasuk file gambar asli via FormData)
-            if (webhookUrl) {
-                await sendToDiscordWithImages(webhookUrl, newItem, compCost, totalCost, period, !!id);
+            // Otomatis susun webhook URL lengkap dengan Thread ID yang tersimpan di pengaturan atas
+            let threadId = document.getElementById('global-thread-id').value.trim();
+            let finalWebhookUrl = BASE_WEBHOOK_URL;
+            if (threadId) {
+                finalWebhookUrl += `?thread_id=${threadId}`;
             }
+
+            await sendToDiscordWithImages(finalWebhookUrl, newItem, engineCost, bodyCost, totalCost, period, !!id);
         }
 
         function deleteItem(id) {
             if (confirm('Apakah Anda yakin ingin menghapus laporan maintenance ini?')) {
                 maintenanceData = maintenanceData.filter(d => d.id !== id);
+                saveToLocalStorage();
                 applyFilter();
             }
         }
 
-        // Fungsi konversi DataURL/Base64 ke File/Blob agar bisa dilampirkan ke Discord Webhook multipart/form-data
         function dataURLtoBlob(dataurl) {
             let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
                 bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
@@ -473,7 +521,7 @@
             return new Blob([u8arr], {type:mime});
         }
 
-        async function sendToDiscordWithImages(webhookUrl, item, compCost, totalCost, period, isEdit = false) {
+        async function sendToDiscordWithImages(webhookUrl, item, engineCost, bodyCost, totalCost, period, isEdit = false) {
             const actionTitle = isEdit ? "✏️ **Laporan Maintenance Diperbarui**" : "🚨 **Laporan Maintenance Kendaraan Baru**";
             
             const formData = new FormData();
@@ -484,19 +532,14 @@
                 fields: [
                     { name: "📅 Tanggal", value: item.date, inline: true },
                     { name: "⏱️ Periode", value: `Periode ${period}`, inline: true },
-                    { name: "🔧 Jumlah Komponen", value: `${item.component} (${formatCurrency(compCost)})`, inline: true },
-                    { name: "⛽ Biaya Solar", value: formatCurrency(item.solar), inline: true },
+                    { name: "⚙️ Engine", value: `${item.engine || 0} (${formatCurrency(engineCost)})`, inline: true },
+                    { name: "🚗 Body", value: `${item.body || 0} (${formatCurrency(bodyCost)})`, inline: true },
+                    { name: "⛽ Solar", value: formatCurrency(item.solar || 0), inline: true },
                     { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false }
                 ],
                 footer: { text: "Fleet Maintenance Dashboard System" },
                 timestamp: new Date().toISOString()
             };
-
-            // Jika ada gambar, set attachment image discord atau masukkan ke payload
-            if (item.images && item.images.length > 0) {
-                // Tampilkan gambar pertama langsung di embed (jika diinginkan)
-                // embed.image = { url: `attachment://bukti_1.png` };
-            }
 
             const payload = {
                 content: `${actionTitle} (Periode ${period})`,
@@ -505,7 +548,6 @@
 
             formData.append('payload_json', JSON.stringify(payload));
 
-            // Masukkan file gambar ke FormData jika ada
             if (item.images && item.images.length > 0) {
                 item.images.forEach((imgBase64, index) => {
                     const blob = dataURLtoBlob(imgBase64);
@@ -516,17 +558,16 @@
             try {
                 const response = await fetch(webhookUrl, {
                     method: 'POST',
-                    body: formData // Menggunakan FormData agar file gambar terkirim utuh ke Discord
+                    body: formData
                 });
                 if (response.ok) {
-                    console.log('Laporan & gambar berhasil dikirim ke Discord!');
+                    console.log('Laporan & gambar berhasil dikirim ke Discord Thread!');
                 } else {
                     console.error('Gagal mengirim ke Discord:', response.statusText);
-                    alert('Laporan tersimpan, namun pengiriman file gambar ke Discord gagal (Cek URL Webhook atau batasan ukuran file).');
+                    alert('Laporan tersimpan di dashboard, namun pengiriman ke Discord gagal (Pastikan Thread ID valid).');
                 }
             } catch (err) {
                 console.error('Error mengirim ke Discord:', err);
-                alert('Catatan: Pengiriman ke Discord Webhook dibatasi oleh kebijakan CORS browser. Jika dicoba langsung via browser dan gagal, Anda memerlukan server kecil / backend proxy untuk meneruskan webhook.');
             }
         }
     </script>
