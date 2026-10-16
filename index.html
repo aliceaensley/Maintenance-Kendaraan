@@ -95,6 +95,7 @@
                             <th class="py-3 px-4 text-right">Jml Component</th>
                             <th class="py-3 px-4 text-right">Solar ($)</th>
                             <th class="py-3 px-4 text-right">Total Biaya ($)</th>
+                            <th class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="maintenance-table-body" class="divide-y divide-slate-200">
@@ -105,14 +106,15 @@
         </div>
     </main>
 
-    <!-- Modal Form Tambah Maintenance -->
+    <!-- Modal Form Tambah/Edit Maintenance -->
     <div id="maintenance-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance</h3>
+                <h3 class="font-bold text-lg" id="modal-title"><i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="maintenance-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="form-id">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal Maintenance</label>
                     <input type="date" id="form-date" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
@@ -140,7 +142,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Discord Webhook URL (Opsional)</label>
                     <input type="url" id="form-webhook" placeholder="https://discord.com/api/webhooks/..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-[11px] text-slate-400 mt-1">Kosongkan jika hanya ingin menyimpan lokal & simulasi kirim.</p>
+                    <p class="text-[11px] text-slate-500 mt-1">💡 <b>Info Thread Discord:</b> Agar pesan masuk ke dalam <b>Thread</b> tertentu, Anda wajib menambahkan parameter <code>?thread_id=ID_THREAD_ANDA</code> di akhir URL webhook Discord Anda.</p>
                 </div>
                 <!-- Preview Kalkulasi -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 space-y-1">
@@ -151,7 +153,7 @@
                     <button type="button" onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition">Batal</button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                         <i class="fa-solid fa-paper-plane"></i>
-                        <span>Submit & Kirim ke Discord</span>
+                        <span id="submit-btn-text">Simpan & Kirim</span>
                     </button>
                 </div>
             </form>
@@ -194,15 +196,38 @@
             document.getElementById('filter-period').value = autoPeriod;
             document.getElementById('active-period-badge').innerText = `Periode Otomatis Aktif: Periode ${autoPeriod}`;
 
-            // Set default form date ke hari ini
-            document.getElementById('form-date').valueAsDate = today;
-
             applyFilter();
         });
 
-        function openModal() {
-            document.getElementById('maintenance-modal').classList.remove('hidden');
-            document.getElementById('maintenance-modal').classList.add('flex');
+        function openModal(id = null) {
+            const modal = document.getElementById('maintenance-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            if (id) {
+                // Mode Edit
+                document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2 text-amber-400"></i>Edit Laporan Maintenance`;
+                document.getElementById('submit-btn-text').innerText = 'Update Perubahan';
+                
+                const item = maintenanceData.find(d => d.id === id);
+                if (item) {
+                    document.getElementById('form-id').value = item.id;
+                    document.getElementById('form-date').value = item.date;
+                    document.getElementById('form-vehicle').value = item.vehicle;
+                    document.getElementById('form-plate').value = item.plate;
+                    document.getElementById('form-component').value = item.component;
+                    document.getElementById('form-solar').value = item.solar;
+                    calculatePreview();
+                }
+            } else {
+                // Mode Tambah Baru
+                document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance`;
+                document.getElementById('submit-btn-text').innerText = 'Submit & Kirim ke Discord';
+                document.getElementById('maintenance-form').reset();
+                document.getElementById('form-id').value = '';
+                document.getElementById('form-date').valueAsDate = new Date();
+                calculatePreview();
+            }
         }
 
         function closeModal() {
@@ -244,7 +269,7 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
                 return;
             }
 
@@ -263,6 +288,10 @@
                     <td class="py-3 px-4 text-right">${item.component} <span class="text-xs text-slate-400">(${formatCurrency(compCost)})</span></td>
                     <td class="py-3 px-4 text-right">${formatCurrency(item.solar)}</td>
                     <td class="py-3 px-4 text-right font-bold text-slate-900">${formatCurrency(totalCost)}</td>
+                    <td class="py-3 px-4 text-center space-x-1">
+                        <button onclick="openModal(${item.id})" class="bg-amber-100 text-amber-700 hover:bg-amber-200 p-1.5 rounded text-xs transition" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteItem(${item.id})" class="bg-rose-100 text-rose-700 hover:bg-rose-200 p-1.5 rounded text-xs transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -287,6 +316,7 @@
         async function handleFormSubmit(event) {
             event.preventDefault();
 
+            const id = document.getElementById('form-id').value;
             const date = document.getElementById('form-date').value;
             const vehicle = document.getElementById('form-vehicle').value;
             const plate = document.getElementById('form-plate').value;
@@ -298,43 +328,54 @@
             const totalCost = compCost + solar;
             const period = getPeriod(date);
 
-            // Tambahkan ke data lokal
-            const newItem = {
-                id: Date.now(),
-                date,
-                vehicle,
-                plate,
-                component,
-                solar
-            };
-            maintenanceData.unshift(newItem);
+            let newItem;
+            if (id) {
+                // Update Existing
+                const index = maintenanceData.findIndex(d => d.id == id);
+                if (index !== -1) {
+                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, component, solar };
+                    newItem = maintenanceData[index];
+                }
+                alert('Laporan maintenance berhasil diperbarui!');
+            } else {
+                // Add New
+                newItem = {
+                    id: Date.now(),
+                    date,
+                    vehicle,
+                    plate,
+                    component,
+                    solar
+                };
+                maintenanceData.unshift(newItem);
+                alert('Laporan maintenance baru berhasil disimpan!');
+            }
 
-            // Reset & Close Modal
-            document.getElementById('maintenance-form').reset();
-            document.getElementById('form-date').valueAsDate = new Date();
-            calculatePreview();
+            // Close & Reset
             closeModal();
-
-            // Apply filter agar data langsung muncul
             document.getElementById('filter-month').value = new Date(date).getMonth() + 1;
             applyFilter();
 
-            alert('Laporan maintenance berhasil disimpan!');
-
             // Kirim ke Discord Webhook jika diisi
             if (webhookUrl) {
-                await sendToDiscordThread(webhookUrl, newItem, compCost, totalCost, period);
+                await sendToDiscordThread(webhookUrl, newItem, compCost, totalCost, period, !!id);
             }
         }
 
-        async function sendToDiscordThread(webhookUrl, item, compCost, totalCost, period) {
-            // Discord webhook untuk kirim ke thread memerlukan parameter ?thread_id=... atau dikirim sebagai pesan thread
-            // Format Payload Discord Webhook
+        function deleteItem(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus laporan maintenance ini?')) {
+                maintenanceData = maintenanceData.filter(d => d.id !== id);
+                applyFilter();
+            }
+        }
+
+        async function sendToDiscordThread(webhookUrl, item, compCost, totalCost, period, isEdit = false) {
+            const actionTitle = isEdit ? "✏️ **Laporan Maintenance Diperbarui**" : "🚨 **Laporan Maintenance Kendaraan Baru**";
             const payload = {
-                content: `🚨 **Laporan Maintenance Kendaraan Baru (Periode ${period})** 🚨`,
+                content: `${actionTitle} (Periode ${period})`,
                 embeds: [{
                     title: `${item.vehicle} (${item.plate})`,
-                    color: 3447003,
+                    color: isEdit ? 16776960 : 3447003,
                     fields: [
                         { name: "📅 Tanggal", value: item.date, inline: true },
                         { name: "⏱️ Periode", value: `Periode ${period}`, inline: true },
@@ -360,7 +401,7 @@
                 }
             } catch (err) {
                 console.error('Error mengirim ke Discord:', err);
-                alert('Catatan: Laporan tersimpan lokal, namun gagal terkirim ke Discord Webhook karena pembatasan CORS browser. (Saran: Gunakan backend/proxy atau test langsung via server).');
+                alert('Catatan: Data tersimpan di dashboard, namun pengiriman ke Discord Webhook mengalami kendala CORS browser. Pastikan URL webhook valid atau gunakan server proxy.');
             }
         }
     </script>
