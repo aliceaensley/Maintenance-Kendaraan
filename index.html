@@ -95,6 +95,7 @@
                             <th class="py-3 px-4 text-right">Jml Component</th>
                             <th class="py-3 px-4 text-right">Solar ($)</th>
                             <th class="py-3 px-4 text-right">Total Biaya ($)</th>
+                            <th class="py-3 px-4 text-center">Bukti Gambar</th>
                             <th class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -107,8 +108,8 @@
     </main>
 
     <!-- Modal Form Tambah/Edit Maintenance -->
-    <div id="maintenance-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div id="maintenance-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden my-8 animate-in fade-in zoom-in duration-200">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="font-bold text-lg" id="modal-title"><i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -139,16 +140,32 @@
                         <input type="number" step="any" id="form-solar" placeholder="0.00" required oninput="calculatePreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
+
+                <!-- Area Attachment Bukti Gambar (Maks 2) -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Bukti Gambar Maintenance (Maksimal 2 Gambar)</label>
+                    <div id="image-paste-area" tabindex="0" class="border-2 border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 rounded-xl p-4 text-center cursor-pointer transition focus:outline-none focus:border-blue-500">
+                        <i class="fa-solid fa-paste text-2xl text-slate-400 mb-1"></i>
+                        <p class="text-xs text-slate-600 font-medium">Klik di sini lalu tekan <kbd class="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded text-[10px] font-mono">Ctrl + V</kbd> untuk Paste Gambar</p>
+                        <p class="text-[11px] text-slate-400 mt-1">atau pilih file secara manual</p>
+                        <input type="file" id="image-file-input" accept="image/*" multiple onchange="handleFileInput(event)" class="hidden">
+                    </div>
+                    <!-- Container Preview Gambar -->
+                    <div id="image-preview-container" class="grid grid-cols-2 gap-3 mt-3"></div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Discord Webhook URL (Opsional)</label>
-                    <input type="url" id="form-webhook" placeholder="https://discord.com/api/webhooks/..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
-                    <p class="text-[11px] text-slate-500 mt-1">💡 <b>Info Thread Discord:</b> Agar pesan masuk ke dalam <b>Thread</b> tertentu, Anda wajib menambahkan parameter <code>?thread_id=ID_THREAD_ANDA</code> di akhir URL webhook Discord Anda.</p>
+                    <input type="url" id="form-webhook" placeholder="https://discord.com/api/webhooks/.../...?thread_id=..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-[11px] text-slate-500 mt-1">💡 Tambahkan <code>?thread_id=ID_THREAD</code> pada webhook URL agar pesan terkirim ke thread tertentu.</p>
                 </div>
+
                 <!-- Preview Kalkulasi -->
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 space-y-1">
                     <div class="flex justify-between"><span>Biaya Component (x 1.26):</span> <strong id="preview-comp">$0.00</strong></div>
                     <div class="flex justify-between"><span>Total Biaya (Component + Solar):</span> <strong id="preview-total">$0.00</strong></div>
                 </div>
+
                 <div class="pt-2 flex justify-end space-x-3">
                     <button type="button" onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition">Batal</button>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
@@ -164,11 +181,14 @@
     <script>
         // Sample Initial Data
         let maintenanceData = [
-            { id: 1, date: '2026-10-03', vehicle: 'Dump Truck Hino 500', plate: 'B 9182 UY', component: 4, solar: 150.50 },
-            { id: 2, date: '2026-10-14', vehicle: 'Excavator PC200', plate: 'B 4412 EX', component: 8, solar: 320.00 },
-            { id: 3, date: '2026-10-25', vehicle: 'Bulldozer D65', plate: 'B 7731 BD', component: 3, solar: 210.75 },
-            { id: 4, date: '2026-10-08', vehicle: 'Compactor Sakai', plate: 'B 1102 CP', component: 2, solar: 95.00 }
+            { id: 1, date: '2026-10-03', vehicle: 'Dump Truck Hino 500', plate: 'B 9182 UY', component: 4, solar: 150.50, images: [] },
+            { id: 2, date: '2026-10-14', vehicle: 'Excavator PC200', plate: 'B 4412 EX', component: 8, solar: 320.00, images: [] },
+            { id: 3, date: '2026-10-25', vehicle: 'Bulldozer D65', plate: 'B 7731 BD', component: 3, solar: 210.75, images: [] },
+            { id: 4, date: '2026-10-08', vehicle: 'Compactor Sakai', plate: 'B 1102 CP', component: 2, solar: 95.00, images: [] }
         ];
+
+        // Global State Gambar Form (Maksimal 2)
+        let formImages = []; // Array of Base64 strings or Object { file, url }
 
         // Helper: Tentukan periode berdasarkan tanggal
         function getPeriod(dateStr) {
@@ -187,22 +207,92 @@
             const today = new Date();
             document.getElementById('current-date-display').innerText = today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             
-            // Set default filter ke bulan sekarang (Oktober = 10)
             document.getElementById('filter-month').value = today.getMonth() + 1;
             
-            // Tentukan periode otomatis saat ini
             const currentDay = today.getDate();
             let autoPeriod = currentDay <= 10 ? 1 : (currentDay <= 20 ? 2 : 3);
             document.getElementById('filter-period').value = autoPeriod;
             document.getElementById('active-period-badge').innerText = `Periode Otomatis Aktif: Periode ${autoPeriod}`;
 
+            // Event listener klik pada area paste
+            const pasteArea = document.getElementById('image-paste-area');
+            const fileInput = document.getElementById('image-file-input');
+            pasteArea.addEventListener('click', () => fileInput.click());
+
+            // Event listener Paste (Ctrl+V) di seluruh modal / pasteArea
+            document.addEventListener('paste', handlePasteEvent);
+
             applyFilter();
         });
+
+        // Handler Paste (Ctrl+V)
+        function handlePasteEvent(event) {
+            const modal = document.getElementById('maintenance-modal');
+            if (modal.classList.contains('hidden')) return;
+
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let index = 0; index < items.length; index++) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    processImageFile(blob);
+                }
+            }
+        }
+
+        function handleFileInput(event) {
+            const files = event.target.files;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) {
+                    processImageFile(files[i]);
+                }
+            }
+            event.target.value = ''; // Reset input
+        }
+
+        function processImageFile(file) {
+            if (formImages.length >= 2) {
+                alert('Maksimal hanya 2 gambar bukti yang dapat dilampirkan!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                formImages.push(e.target.result);
+                renderImagePreviews();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(index) {
+            formImages.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('image-preview-container');
+            container.innerHTML = '';
+
+            formImages.forEach((imgUrl, idx) => {
+                const div = document.createElement('div');
+                div.className = 'relative group rounded-lg overflow-hidden border border-slate-300 bg-slate-100 shadow-sm';
+                div.innerHTML = `
+                    <img src="${imgUrl}" class="w-full h-28 object-cover">
+                    <button type="button" onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow hover:bg-rose-700 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <span class="absolute bottom-1 left-1 bg-slate-900/70 text-white text-[10px] px-1.5 py-0.5 rounded">Gambar ${idx + 1}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
 
         function openModal(id = null) {
             const modal = document.getElementById('maintenance-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            formImages = []; // Reset gambar
 
             if (id) {
                 // Mode Edit
@@ -217,6 +307,9 @@
                     document.getElementById('form-plate').value = item.plate;
                     document.getElementById('form-component').value = item.component;
                     document.getElementById('form-solar').value = item.solar;
+                    if (item.images && item.images.length > 0) {
+                        formImages = [...item.images];
+                    }
                     calculatePreview();
                 }
             } else {
@@ -228,6 +321,8 @@
                 document.getElementById('form-date').valueAsDate = new Date();
                 calculatePreview();
             }
+
+            renderImagePreviews();
         }
 
         function closeModal() {
@@ -269,7 +364,7 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-400">Tidak ada data maintenance untuk filter ini.</td></tr>`;
                 return;
             }
 
@@ -277,6 +372,13 @@
                 const period = getPeriod(item.date);
                 const compCost = item.component * 1.26;
                 const totalCost = compCost + item.solar;
+
+                let imageBadges = '<span class="text-xs text-slate-400">-</span>';
+                if (item.images && item.images.length > 0) {
+                    imageBadges = `<div class="flex justify-center gap-1">` + 
+                        item.images.map((img, i) => `<a href="${img}" target="_blank" class="inline-block"><img src="${img}" class="w-7 h-7 rounded object-cover border border-slate-300 hover:scale-110 transition" title="Gambar ${i+1}"></a>`).join('') +
+                        `</div>`;
+                }
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
@@ -288,6 +390,7 @@
                     <td class="py-3 px-4 text-right">${item.component} <span class="text-xs text-slate-400">(${formatCurrency(compCost)})</span></td>
                     <td class="py-3 px-4 text-right">${formatCurrency(item.solar)}</td>
                     <td class="py-3 px-4 text-right font-bold text-slate-900">${formatCurrency(totalCost)}</td>
+                    <td class="py-3 px-4 text-center">${imageBadges}</td>
                     <td class="py-3 px-4 text-center space-x-1">
                         <button onclick="openModal(${item.id})" class="bg-amber-100 text-amber-700 hover:bg-amber-200 p-1.5 rounded text-xs transition" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="deleteItem(${item.id})" class="bg-rose-100 text-rose-700 hover:bg-rose-200 p-1.5 rounded text-xs transition" title="Hapus"><i class="fa-solid fa-trash"></i></button>
@@ -333,7 +436,7 @@
                 // Update Existing
                 const index = maintenanceData.findIndex(d => d.id == id);
                 if (index !== -1) {
-                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, component, solar };
+                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, component, solar, images: [...formImages] };
                     newItem = maintenanceData[index];
                 }
                 alert('Laporan maintenance berhasil diperbarui!');
@@ -345,7 +448,8 @@
                     vehicle,
                     plate,
                     component,
-                    solar
+                    solar,
+                    images: [...formImages]
                 };
                 maintenanceData.unshift(newItem);
                 alert('Laporan maintenance baru berhasil disimpan!');
@@ -371,21 +475,26 @@
 
         async function sendToDiscordThread(webhookUrl, item, compCost, totalCost, period, isEdit = false) {
             const actionTitle = isEdit ? "✏️ **Laporan Maintenance Diperbarui**" : "🚨 **Laporan Maintenance Kendaraan Baru**";
+            
+            // Format Embed Discord
+            const embed = {
+                title: `${item.vehicle} (${item.plate})`,
+                color: isEdit ? 16776960 : 3447003,
+                fields: [
+                    { name: "📅 Tanggal", value: item.date, inline: true },
+                    { name: "⏱️ Periode", value: `Periode ${period}`, inline: true },
+                    { name: "🔧 Jumlah Komponen", value: `${item.component} (${formatCurrency(compCost)})`, inline: true },
+                    { name: "⛽ Biaya Solar", value: formatCurrency(item.solar), inline: true },
+                    { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false },
+                    { name: "🖼️ Jumlah Bukti Gambar", value: `${item.images ? item.images.length : 0} gambar terlampir`, inline: false }
+                ],
+                footer: { text: "Fleet Maintenance Dashboard System" },
+                timestamp: new Date().toISOString()
+            };
+
             const payload = {
                 content: `${actionTitle} (Periode ${period})`,
-                embeds: [{
-                    title: `${item.vehicle} (${item.plate})`,
-                    color: isEdit ? 16776960 : 3447003,
-                    fields: [
-                        { name: "📅 Tanggal", value: item.date, inline: true },
-                        { name: "⏱️ Periode", value: `Periode ${period}`, inline: true },
-                        { name: "🔧 Jumlah Komponen", value: `${item.component} (${formatCurrency(compCost)})`, inline: true },
-                        { name: "⛽ Biaya Solar", value: formatCurrency(item.solar), inline: true },
-                        { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false }
-                    ],
-                    footer: { text: "Fleet Maintenance Dashboard System" },
-                    timestamp: new Date().toISOString()
-                }]
+                embeds: [embed]
             };
 
             try {
@@ -401,7 +510,6 @@
                 }
             } catch (err) {
                 console.error('Error mengirim ke Discord:', err);
-                alert('Catatan: Data tersimpan di dashboard, namun pengiriman ke Discord Webhook mengalami kendala CORS browser. Pastikan URL webhook valid atau gunakan server proxy.');
             }
         }
     </script>
