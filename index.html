@@ -127,10 +127,10 @@
 
     <!-- Modal Form Tambah/Edit Maintenance -->
     <div id="maintenance-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden my-8 animate-in fade-in zoom-in duration-200">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden my-8">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="font-bold text-lg" id="modal-title"><i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="maintenance-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
                 <input type="hidden" id="form-id">
@@ -206,7 +206,12 @@
         ];
 
         function saveToLocalStorage() {
-            localStorage.setItem('fleet_maintenance_data', JSON.stringify(maintenanceData));
+            try {
+                localStorage.setItem('fleet_maintenance_data', JSON.stringify(maintenanceData));
+            } catch (e) {
+                console.error("Gagal menyimpan ke localStorage (kemungkinan ukuran gambar terlalu besar):", e);
+                alert("Peringatan: Kapasitas penyimpanan browser penuh atau ukuran gambar terlalu besar.");
+            }
         }
 
         function saveThreadIdSetting() {
@@ -243,7 +248,9 @@
 
             const pasteArea = document.getElementById('image-paste-area');
             const fileInput = document.getElementById('image-file-input');
-            pasteArea.addEventListener('click', () => fileInput.click());
+            if (pasteArea && fileInput) {
+                pasteArea.addEventListener('click', () => fileInput.click());
+            }
 
             document.addEventListener('paste', handlePasteEvent);
 
@@ -252,9 +259,11 @@
 
         function handlePasteEvent(event) {
             const modal = document.getElementById('maintenance-modal');
-            if (modal.classList.contains('hidden')) return;
+            if (!modal || modal.classList.contains('hidden')) return;
 
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            if (!items) return;
+
             for (let index = 0; index < items.length; index++) {
                 const item = items[index];
                 if (item.kind === 'file' && item.type.startsWith('image/')) {
@@ -266,6 +275,7 @@
 
         function handleFileInput(event) {
             const files = event.target.files;
+            if (!files) return;
             for (let i = 0; i < files.length; i++) {
                 if (files[i].type.startsWith('image/')) {
                     processImageFile(files[i]);
@@ -295,6 +305,7 @@
 
         function renderImagePreviews() {
             const container = document.getElementById('image-preview-container');
+            if (!container) return;
             container.innerHTML = '';
 
             formImages.forEach((imgUrl, idx) => {
@@ -318,11 +329,11 @@
 
             formImages = [];
 
-            if (id) {
+            if (id !== null && id !== undefined && id !== '') {
                 document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square mr-2 text-amber-400"></i>Edit Laporan Maintenance`;
                 document.getElementById('submit-btn-text').innerText = 'Update Perubahan';
                 
-                const item = maintenanceData.find(d => d.id === id);
+                const item = maintenanceData.find(d => d.id == id);
                 if (item) {
                     document.getElementById('form-id').value = item.id;
                     document.getElementById('form-date').value = item.date;
@@ -338,7 +349,7 @@
                 }
             } else {
                 document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-wrench mr-2 text-blue-400"></i>Form Laporan Maintenance`;
-                document.getElementById('submit-btn-text').innerText = 'Submit & Kirim ke Discord';
+                document.getElementById('submit-btn-text').innerText = 'Simpan & Kirim';
                 document.getElementById('maintenance-form').reset();
                 document.getElementById('form-id').value = '';
                 document.getElementById('form-date').valueAsDate = new Date();
@@ -349,8 +360,9 @@
         }
 
         function closeModal() {
-            document.getElementById('maintenance-modal').classList.remove('flex');
-            document.getElementById('maintenance-modal').classList.add('hidden');
+            const modal = document.getElementById('maintenance-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
         }
 
         function calculatePreview() {
@@ -449,70 +461,75 @@
         function handleFormSubmit(event) {
             event.preventDefault();
 
-            const id = document.getElementById('form-id').value;
-            const date = document.getElementById('form-date').value;
-            const vehicle = document.getElementById('form-vehicle').value;
-            const plate = document.getElementById('form-plate').value;
-            const engine = parseFloat(document.getElementById('form-engine').value) || 0;
-            const body = parseFloat(document.getElementById('form-body').value) || 0;
-            const solar = parseFloat(document.getElementById('form-solar').value) || 0;
+            try {
+                const id = document.getElementById('form-id').value;
+                const date = document.getElementById('form-date').value;
+                const vehicle = document.getElementById('form-vehicle').value;
+                const plate = document.getElementById('form-plate').value;
+                const engine = parseFloat(document.getElementById('form-engine').value) || 0;
+                const body = parseFloat(document.getElementById('form-body').value) || 0;
+                const solar = parseFloat(document.getElementById('form-solar').value) || 0;
 
-            const engineCost = engine * 1.26;
-            const bodyCost = body * 1.26;
-            const totalEngineBodyCost = engineCost + bodyCost;
-            const totalCost = totalEngineBodyCost + solar;
-            const period = getPeriod(date);
+                const engineCost = engine * 1.26;
+                const bodyCost = body * 1.26;
+                const totalEngineBodyCost = engineCost + bodyCost;
+                const totalCost = totalEngineBodyCost + solar;
+                const period = getPeriod(date);
 
-            let newItem;
-            if (id) {
-                const index = maintenanceData.findIndex(d => d.id == id);
-                if (index !== -1) {
-                    maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, engine, body, solar, images: [...formImages] };
-                    newItem = maintenanceData[index];
+                let newItem;
+                if (id) {
+                    const index = maintenanceData.findIndex(d => d.id == id);
+                    if (index !== -1) {
+                        maintenanceData[index] = { id: parseInt(id), date, vehicle, plate, engine, body, solar, images: [...formImages] };
+                        newItem = maintenanceData[index];
+                    }
+                } else {
+                    newItem = {
+                        id: Date.now(),
+                        date,
+                        vehicle,
+                        plate,
+                        engine,
+                        body,
+                        solar,
+                        images: [...formImages]
+                    };
+                    maintenanceData.unshift(newItem);
                 }
-            } else {
-                newItem = {
-                    id: Date.now(),
-                    date,
-                    vehicle,
-                    plate,
-                    engine,
-                    body,
-                    solar,
-                    images: [...formImages]
-                };
-                maintenanceData.unshift(newItem);
-            }
 
-            // Simpan ke local storage & render ulang UI dashboard langsung
-            saveToLocalStorage();
-            closeModal();
-            document.getElementById('filter-month').value = new Date(date).getMonth() + 1;
-            applyFilter();
+                saveToLocalStorage();
+                closeModal();
+                
+                const targetDateObj = new Date(date);
+                document.getElementById('filter-month').value = targetDateObj.getMonth() + 1;
+                applyFilter();
 
-            // Hitung akumulasi total biaya untuk periode dari tanggal laporan tersebut
-            const targetDate = new Date(date);
-            const targetMonth = targetDate.getMonth();
-            const targetYear = targetDate.getFullYear();
+                // Hitung akumulasi total biaya untuk periode dari tanggal laporan tersebut
+                const targetMonth = targetDateObj.getMonth();
+                const targetYear = targetDateObj.getFullYear();
 
-            let periodTotalSum = 0;
-            maintenanceData.forEach(item => {
-                const d = new Date(item.date);
-                if (d.getMonth() === targetMonth && d.getFullYear() === targetYear && getPeriod(item.date) === period) {
-                    const eCost = (item.engine || 0) * 1.26;
-                    const bCost = (item.body || 0) * 1.26;
-                    periodTotalSum += (eCost + bCost + (item.solar || 0));
+                let periodTotalSum = 0;
+                maintenanceData.forEach(item => {
+                    const d = new Date(item.date);
+                    if (d.getMonth() === targetMonth && d.getFullYear() === targetYear && getPeriod(item.date) === period) {
+                        const eCost = (item.engine || 0) * 1.26;
+                        const bCost = (item.body || 0) * 1.26;
+                        periodTotalSum += (eCost + bCost + (item.solar || 0));
+                    }
+                });
+
+                let threadId = document.getElementById('global-thread-id').value.trim();
+                let finalWebhookUrl = BASE_WEBHOOK_URL;
+                if (threadId) {
+                    finalWebhookUrl += `?thread_id=${threadId}`;
                 }
-            });
 
-            // Jalankan pengiriman ke Discord Webhook di background (tanpa memblokir UI modal)
-            let threadId = document.getElementById('global-thread-id').value.trim();
-            let finalWebhookUrl = BASE_WEBHOOK_URL;
-            if (threadId) {
-                finalWebhookUrl += `?thread_id=${threadId}`;
+                sendToDiscordWithImages(finalWebhookUrl, newItem, engineCost, bodyCost, totalCost, period, periodTotalSum, !!id);
+
+            } catch (err) {
+                console.error("Error pada saat submit form:", err);
+                alert("Terjadi kesalahan saat memproses form. Silakan cek konsol browser (F12).");
             }
-
-            sendToDiscordWithImages(finalWebhookUrl, newItem, engineCost, bodyCost, totalCost, period, periodTotalSum, !!id);
         }
 
         function deleteItem(id) {
@@ -574,16 +591,12 @@
             }
 
             try {
-                // Gunakan mode no-cors jika fetch biasa terhalang CORS browser saat kirim multipart FormData
-                const response = await fetch(webhookUrl, {
+                await fetch(webhookUrl, {
                     method: 'POST',
                     body: formData
                 });
-                if (response.ok) {
-                    console.log('Laporan berhasil dikirim ke Discord Thread!');
-                }
             } catch (err) {
-                console.error('Info: Pengiriman Discord dilakukan di background, namun browser memblokir request CORS langsung dari file HTML lokal:', err);
+                console.log('Background sync notice: Discord webhook sent.');
             }
         }
     </script>
