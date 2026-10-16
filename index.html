@@ -196,10 +196,8 @@
 
     <!-- Script Aplikasi -->
     <script>
-        // Webhook URL Utama yang Anda berikan
         const BASE_WEBHOOK_URL = "https://discord.com/api/webhooks/1560485872334413826/VdkBoCpDYC2XHzTvKIsOeezbLPIlive_5uJAa81Md6jF_mdXoXraogiQxRMHB2XUBKbt";
 
-        // Storage Persistence
         let maintenanceData = JSON.parse(localStorage.getItem('fleet_maintenance_data')) || [
             { id: 1, date: '2026-10-03', vehicle: 'Dump Truck Hino 500', plate: 'B 9182 UY', engine: 4, body: 2, solar: 150.50, images: [] },
             { id: 2, date: '2026-10-14', vehicle: 'Excavator PC200', plate: 'B 4412 EX', engine: 5, body: 3, solar: 320.00, images: [] },
@@ -240,7 +238,6 @@
             document.getElementById('filter-period').value = autoPeriod;
             document.getElementById('active-period-badge').innerText = `Periode Aktif Otomatis: Periode ${autoPeriod}`;
 
-            // Load saved Thread ID
             const savedThreadId = localStorage.getItem('fleet_discord_thread_id') || '';
             document.getElementById('global-thread-id').value = savedThreadId;
 
@@ -494,14 +491,29 @@
             document.getElementById('filter-month').value = new Date(date).getMonth() + 1;
             applyFilter();
 
-            // Otomatis susun webhook URL lengkap dengan Thread ID yang tersimpan di pengaturan atas
+            // Hitung akumulasi total biaya untuk periode dari tanggal laporan tersebut
+            const targetDate = new Date(date);
+            const targetMonth = targetDate.getMonth();
+            const targetYear = targetDate.getFullYear();
+
+            let periodTotalSum = 0;
+            maintenanceData.forEach(item => {
+                const d = new Date(item.date);
+                if (d.getMonth() === targetMonth && d.getFullYear() === targetYear && getPeriod(item.date) === period) {
+                    const eCost = (item.engine || 0) * 1.26;
+                    const bCost = (item.body || 0) * 1.26;
+                    periodTotalSum += (eCost + bCost + (item.solar || 0));
+                }
+            });
+
+            // Kirim ke Discord Webhook
             let threadId = document.getElementById('global-thread-id').value.trim();
             let finalWebhookUrl = BASE_WEBHOOK_URL;
             if (threadId) {
                 finalWebhookUrl += `?thread_id=${threadId}`;
             }
 
-            await sendToDiscordWithImages(finalWebhookUrl, newItem, engineCost, bodyCost, totalCost, period, !!id);
+            await sendToDiscordWithImages(finalWebhookUrl, newItem, engineCost, bodyCost, totalCost, period, periodTotalSum, !!id);
         }
 
         function deleteItem(id) {
@@ -521,7 +533,7 @@
             return new Blob([u8arr], {type:mime});
         }
 
-        async function sendToDiscordWithImages(webhookUrl, item, engineCost, bodyCost, totalCost, period, isEdit = false) {
+        async function sendToDiscordWithImages(webhookUrl, item, engineCost, bodyCost, totalCost, period, periodTotalSum, isEdit = false) {
             const actionTitle = isEdit ? "✏️ **Laporan Maintenance Diperbarui**" : "🚨 **Laporan Maintenance Kendaraan Baru**";
             
             const formData = new FormData();
@@ -535,7 +547,8 @@
                     { name: "⚙️ Engine", value: `${item.engine || 0} (${formatCurrency(engineCost)})`, inline: true },
                     { name: "🚗 Body", value: `${item.body || 0} (${formatCurrency(bodyCost)})`, inline: true },
                     { name: "⛽ Solar", value: formatCurrency(item.solar || 0), inline: true },
-                    { name: "💰 Total Biaya", value: `**${formatCurrency(totalCost)}**`, inline: false }
+                    { name: "💰 Total Laporan Ini", value: formatCurrency(totalCost), inline: true },
+                    { name: "📊 **Total Akumulasi Periode Ini**", value: `**${formatCurrency(periodTotalSum)}**`, inline: false }
                 ],
                 footer: { text: "Fleet Maintenance Dashboard System" },
                 timestamp: new Date().toISOString()
@@ -561,7 +574,7 @@
                     body: formData
                 });
                 if (response.ok) {
-                    console.log('Laporan & gambar berhasil dikirim ke Discord Thread!');
+                    console.log('Laporan & total akumulasi berhasil dikirim ke Discord Thread!');
                 } else {
                     console.error('Gagal mengirim ke Discord:', response.statusText);
                     alert('Laporan tersimpan di dashboard, namun pengiriman ke Discord gagal (Pastikan Thread ID valid).');
